@@ -1,1 +1,1 @@
-kod ma nadal błędy :(
+kod działa :D
