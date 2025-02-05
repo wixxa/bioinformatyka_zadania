@@ -1,0 +1,171 @@
+analizowany scaffold: scaffold2 
+osobnik 1: C_ruf_12 
+osobnik 2: C_pyg_28
+
+ssh st4@150.254.120.213
+Waterparks69
+
+SAMPLES=/home/mkonczal/Teaching/GEiP/Data/SamplesLibraries.txt
+FASTQ_DIR=/home/mkonczal/Teaching/GEiP/Data/Fastq
+REF=/home/mkonczal/Teaching/GEiP/Data/Reference/SBS_final.scaffolds.fasta
+
+conda activate GEiP
+
+seqkit grep -p "scaffold2"
+$REF > scaffold2.fasta
+
+samtools faidx scaffold2.fasta
+cut -f 2 scaffold2.fasta.fai 
+
+---
+10659794
+---
+
+cat $SAMPLES
+---
+C_ruf_12	SRS3209991	SRR7054136
+C_ruf_12	SRS3209991	SRR7054145
+
+C_pyg_28	SRS3209975	SRR7054160
+C_pyg_28	SRS3209975	SRR7054169
+---
+
+dla pyg_28
+
+cp ${FASTQ_DIR}/SRR7054160/SRR7054160_pass_1.fastq.gz .
+cp ${FASTQ_DIR}/SRR7054160/SRR7054160_pass_2.fastq.gz .
+
+cp ${FASTQ_DIR}/SRR7054169/SRR7054169_pass_1.fastq.gz .
+cp ${FASTQ_DIR}/SRR7054169/SRR7054169_pass_2.fastq.gz .
+
+f1=SRR7054160_pass_1.fastq.gz
+f2=SRR7054160_pass_2.fastq.gz
+f3=SRR7054169_pass_1.fastq.gz
+f4=SRR7054169_pass_2.fastq.gz
+
+dla ruf_12
+
+cp ${FASTQ_DIR}/SRR7054136/SRR7054136_pass_1.fastq.gz .
+cp ${FASTQ_DIR}/SRR7054136/SRR7054136_pass_2.fastq.gz .
+
+cp ${FASTQ_DIR}/SRR7054145/SRR7054145_pass_1.fastq.gz .
+cp ${FASTQ_DIR}/SRR7054145/SRR7054145_pass_2.fastq.gz .
+
+f1_2=SRR7054136_pass_1.fastq.gz
+f2_2=SRR7054136_pass_2.fastq.gz
+f3_2=SRR7054145_pass_1.fastq.gz
+f4_2=SRR7054145_pass_2.fastq.gz
+
+
+cd pyg_28
+fastqc $f1 $f2
+
+fastp -i $f1 -I $f2 -o SRR7054160_pass_1.filt.fastq -O SRR7054160_pass_2.filt.fastq
+
+ls –lh
+
+fastqc SRR7054160_pass_1.filt.fastq SRR7054160_pass_2.filt.fastq
+
+screen -S fasqc_1_34
+fastqc $f3 $f4
+
+fastp -i $f3 -I $f4 -o SRR7054169_pass_1.filt.fastq -O
+SRR7054169_pass_2.filt.fastq
+
+ls –lh
+
+fastqc SRR7054169_pass_1.filt.fastq SRR7054169_pass_2.filt.fastq
+
+
+cd ruf_12
+screen –S fastqc_2_12
+fastqc $f1_2 $f2_2
+screen –S fastqc_2_34
+fastqc $f3_2 $f4_2
+
+fastp -i $f1_2 -I $f2_2 -o SRR7054136_pass_1.filt.fastq -O SRR7054136_pass_2.filt.fastq
+
+fastp -i $f3_2 -I $f4_2 -o SRR7054145_pass_1.filt.fastq -O SRR7054145_pass_2.filt.fastq
+
+ls –lh
+
+fastqc SRR7054136_pass_1.filt.fastq SRR7054136_pass_2.filt.fastq
+fastqc SRR7054145_pass_1.filt.fastq SRR7054145_pass_2.filt.fastq
+
+
+bwa index scaffold2.fasta
+
+screen –S mapowanie_1_12
+
+bwa mem -t 10 -R '@RG\tID:SRR7054160\tSM:C_pyg_28\tLB: SRR7054160\tPL:ILLUMINA\tPU:lib1_unit' /home/st4/GEiP/lab_1/scaffold2.fasta SRR7054160_pass_1.filt.fastq SRR7054160_pass_2.filt.fastq | samtools view -F 4 -o SRR7054160.Mapped.bam
+
+
+screen -S mapowanie_1_34
+
+conda activate GEiP
+
+bwa mem -t 10 -R '@RG\tID:SRR7054169\tSM:C_pyg_28\tLB: SRR7054169\tPL:ILLUMINA\tPU:lib1_unit' /home/st4/GEiP/lab_1/scaffold2.fasta SRR7054169_pass_1.filt.fastq SRR7054169_pass_2.filt.fastq | samtools view -F 4 -o SRR7054169.Mapped.bam
+
+
+screen –S mapowanie_2_12
+
+bwa mem -t 10 -R '@RG\tID:SRR7054136\tSM:C_pyg_28\tLB: SRR7054136\tPL:ILLUMINA\tPU:lib1_unit' /home/st4/GEiP/lab_1/scaffold2.fasta SRR7054136_pass_1.filt.fastq SRR7054136_pass_2.filt.fastq | samtools view -F 4 -o SRR7054136.Mapped.bam
+
+
+screen –S mapowanie_2_34
+
+bwa mem -t 10 -R '@RG\tID:SRR7054145\tSM:C_pyg_28\tLB: SRR7054145\tPL:ILLUMINA\tPU:lib1_unit' /home/st4/GEiP/lab_1/scaffold2.fasta SRR7054145_pass_1.filt.fastq SRR7054145_pass_2.filt.fastq | samtools view -F 4 -o SRR7054145.Mapped.bam
+
+rm $f1 $f2 $f3 $f4
+rm $f1_2 $f2_2 $f3_2 $f4_2
+
+
+samtools sort -T bam SRR7054160.Mapped.bam > SRR7054160.Mapped.sorted.bam
+samtools sort -T bam SRR7054169.Mapped.bam > SRR7054169.Mapped.sorted.bam
+
+rm SRR7054160.Mapped.bam
+rm SRR7054169.Mapped.bam
+
+samtools sort -T bam SRR7054136.Mapped.bam > SRR7054136.Mapped.sorted.bam
+samtools sort -T bam SRR7054145.Mapped.bam > SRR7054145.Mapped.sorted.bam
+
+rm SRR7054136.Mapped.bam
+rm SRR7054145.Mapped.bam
+
+
+picard MarkDuplicates REMOVE_DUPLICATES=true REMOVE_SEQUENCING_DUPLICATES=true AS=true I=SRR7054160.Mapped.sorted.bam M=test.metric_SRR7054160.txt O=SRR7054160.Mapped.sorted_DupRmv.bam 2> MarkDup_SRR7054160.log
+
+picard MarkDuplicates REMOVE_DUPLICATES=true REMOVE_SEQUENCING_DUPLICATES=true AS=true I=SRR7054169.Mapped.sorted.bam M=test.metric_SRR7054169.txt O=SRR7054169.Mapped.sorted_DupRmv.bam 2> MarkDup_SRR7054169.log
+
+samtools index SRR7054160.Mapped.sorted_DupRmv.bam
+samtools index SRR7054169.Mapped.sorted_DupRmv.bam
+
+
+
+picard MarkDuplicates REMOVE_DUPLICATES=true REMOVE_SEQUENCING_DUPLICATES=true AS=true I=SRR7054136.Mapped.sorted.bam M=test.metric_SRR7054136.txt O=SRR7054136.Mapped.sorted_DupRmv.bam 2> MarkDup_SRR7054136.log
+
+picard MarkDuplicates REMOVE_DUPLICATES=true REMOVE_SEQUENCING_DUPLICATES=true AS=true I=SRR7054145.Mapped.sorted.bam M=test.metric_SRR7054145.txt O=SRR7054145.Mapped.sorted_DupRmv.bam 2> MarkDup_SRR7054145.log
+
+samtools index SRR7054136.Mapped.sorted_DupRmv.bam
+samtools index SRR7054145.Mapped.sorted_DupRmv.bam
+
+
+
+samtools flagstats SRR7054160.Mapped.sorted_DupRmv.bam
+samtools flagstats SRR7054169.Mapped.sorted_DupRmv.bam
+
+samtools merge –r C_pyg_28.bam 12/SRR7054160.Mapped.sorted_DupRmv.bam 34/SRR7054169.Mapped.sorted_DupRmv.bam
+
+samtools index C_pyg_28.bam
+
+samtools tview --reference /home/st4/GEiP/lab_1/scaffold2.fasta C_pyg_28.bam
+
+
+
+samtools flagstats SRR7054136.Mapped.sorted_DupRmv.bam
+samtools flagstats SRR7054145.Mapped.sorted_DupRmv.bam
+
+samtools merge -r C_pyg_12.bam 12/SRR7054136.Mapped.sorted_DupRmv.bam 34/SRR7054145.Mapped.sorted_DupRmv.bam
+
+samtools index C_pyg_12.bam
+

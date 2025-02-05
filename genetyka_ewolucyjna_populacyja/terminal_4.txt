@@ -1,0 +1,87 @@
+mkdir lab_4
+cd lab_4
+
+mkdir C_pyg_28 C_ruf_12
+
+VCF1_f=~/GEiP/lab_2/out_28.forward.filtered.vcf
+
+VCF2_f=~/GEiP/lab_2/out_12.forward.filtered.vcf
+
+####
+
+BCF=out_12.forward.bcf
+bcftools query -f '%QUAL\t%MQ\t%DP\n' ${BCF} > Stats_QualMQDP_12.txt
+bcftools stats ${BCF} > Stats.stat_12.txt
+
+bcftools view -v snps -e 'QUAL < 30 || MQ < 10 || FORMAT/DP < 5' out_12.forward.bcf > out_12.forward.filtered.vcf
+
+grep "scaffold2" out_12.forward.filtered.vcf | wc -l
+---
+483
+---
+####
+
+conda activate crossmap
+
+cd C_pyg_28
+vcf2bed --max-mem 4G < ${VCF1_f} > vcf_C_pyg_28_forward.bed
+
+grep -v "INDEL" vcf_C_pyg_28_forward.bed > vcf_C_pyg_28_forward_indelRm.bed
+
+CADD=~/GEiP/lab_3/chr2-SBS_CADD.bed
+bed=vcf_C_pyg_28_forward_indelRm.bed
+
+bedtools intersect -a $CADD -b $bed -wa -wb > vcf_C_pyg_28_forward_indelRm_intersect.bed
+
+script_path=/home/mkonczal/Teaching/GEiP/scripts
+
+awk -v b=6 -v e=100 -f ${script_path}/SNP_check_forward.awk vcf_C_pyg_28_forward_indelRm_intersect.bed >vcf_C_pyg_28_forward_indelRm_intersect_annotated.bed
+
+cut -f 23 vcf_C_pyg_28_forward_indelRm_intersect_annotated.bed | sort | uniq -c
+
+---
+     57 ppALT_is_chREF
+     14 SNP_is_ALT
+     25 SNP_is_ALT_pp=ref
+     78 SNP_not_match
+---
+
+awk -F'\t' '$23 == "SNP_is_ALT_pp=ref"' vcf_C_pyg_28_forward_indelRm_intersect_annotated.bed > vcf_C_pyg_28_forward_indelRm_intersect_annotated_SNP_is_alt.bed
+
+awk -e ' $20 ~ /^0\/0/ ' vcf_C_pyg_28_forward_indelRm_intersect_annotated_SNP_is_alt.bed | cut -f 6 | paste -sd+ - | bc
+
+awk -e ' $20 ~ /^0\/1/ ' vcf_C_pyg_28_forward_indelRm_intersect_annotated_SNP_is_alt.bed | cut -f 6 | paste -sd+ - | bc
+
+awk -e ' $20 ~ /^1\/1/ ' vcf_C_pyg_28_forward_indelRm_intersect_annotated_SNP_is_alt.bed | cut -f 6 | paste -sd+ - | bc
+
+###
+cd C_ruf_12
+vcf2bed --max-mem 4G < ${VCF2_f} > vcf_C_ruf_12_forward.bed
+
+grep -v "INDEL" vcf_C_ruf_12_forward.bed > vcf_C_ruf_12_forward_indelRm.bed
+
+CADD=~/GEiP/lab_3/chr2-SBS_CADD.bed
+bed=vcf_C_ruf_12_forward_indelRm.bed
+
+bedtools intersect -a $CADD -b $bed -wa -wb > vcf_C_ruf_12_forward_indelRm_intersect.bed
+
+script_path=/home/mkonczal/Teaching/GEiP/scripts
+
+awk -v b=6 -v e=100 -f ${script_path}/SNP_check_forward.awk vcf_C_ruf_12_forward_indelRm_intersect.bed >vcf_C_ruf_12_forward_indelRm_intersect_annotated.bed
+
+cut -f 23 vcf_C_ruf_12_forward_indelRm_intersect_annotated.bed | sort | uniq -c
+
+---
+    468 ppALT_is_chREF
+     58 SNP_is_ALT
+    187 SNP_is_ALT_pp=ref
+    490 SNP_not_match
+---
+
+awk -F'\t' '$23 == "SNP_is_ALT_pp=ref"' vcf_C_ruf_12_forward_indelRm_intersect_annotated.bed > vcf_C_ruf_12_forward_indelRm_intersect_annotated_SNP_is_alt.bed
+
+awk -e ' $20 ~ /^0\/0/ ' vcf_C_ruf_12_forward_indelRm_intersect_annotated_SNP_is_alt.bed | cut -f 6 | paste -sd+ - | bc
+
+awk -e ' $20 ~ /^0\/1/ ' vcf_C_ruf_12_forward_indelRm_intersect_annotated_SNP_is_alt.bed | cut -f 6 | paste -sd+ - | bc
+
+awk -e ' $20 ~ /^1\/1/ ' vcf_C_ruf_12_forward_indelRm_intersect_annotated_SNP_is_alt.bed | cut -f 6 | paste -sd+ - | bc

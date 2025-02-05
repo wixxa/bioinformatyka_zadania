@@ -1,0 +1,68 @@
+faToTwoBit /home/st4/GEiP/lab_1/scaffold2.fasta scaffold2.2bit
+
+twoBitInfo scaffold2.2bit sizes.tab
+cd ..
+
+ln -s /home/mkonczal/Teaching/GEiP/Data/UCE-probes/uce-5k-probes.fasta .
+
+samtools faidx uce-5k-probes.fasta
+
+bwa index uce-5k-probes.fasta
+
+UCEprobe=/home/mkonczal/Lab2/uce-5k-probes.fasta
+
+phyluce_probe_run_multiple_lastzs_sqlite --db scaffold2.sqlite --output scaffold2-genome-lastz --scaffoldlist scaffold2 --genome-base-path ./ --probefile ${UCEprobe} --cores 10
+
+nano scaffold2.conf
+	[scaffolds]
+	scaffold2:/home/st4/GEiP/lab_2/scaffold2/scaaffold2.2bit
+
+phyluce_probe_slice_sequence_from_genomes --lastz ./scaffold2-genome-lastz --flank 1000 --output OUT --conf scaffold2.conf --name-pattern uce-5k-probes.fasta_v_scaffold2.lastz.clean
+
+
+grep "uce" ~/GEiP/lab_2/OUT/scaffold2.fasta | cut -d '|' -f 2,3,4,6 | sed -e 's/|/\t/g' | sed -e 's/contig://g' | sed -e 's/slice://g'| sed -e 's/uce://g' | sed -e 's/orient://g' | sed -e 's/uce-/uce_/g' | sed -e s/"'"//g | sed -e 's/{+}/forward/g' | sed -e 's/{-}/reverse/g'| sed -e 's/-/\t/g' > /home/st4/GEiP/lab_2/UCE_regions/scaffold2_UCE_regions.txt
+
+
+grep 'forward' UCE_regions/scaffold2_UCE_regions.txt | cut -f 1,2,3 > UCE_regions/forward/scaffold2_UCE_forward_orient_regions.txt
+grep 'reverse' UCE_regions/scaffold2_UCE_regions.txt | cut -f 1,2,3 > UCE_regions/reverse/scaffold2_UCE_reverse_orient_regions.txt
+
+UCE=UCE_regions/forward/scaffold2_UCE_forward_orient_regions.txt
+REF=/home/st4/GEiP/lab_1/scaffold2.fasta
+BAM_28=/home/st4/GEiP/lab_1/pyg_28/C_pyg_28.bam
+BAM_12=/home/st4/GEiP/lab_1/pyg_12/C_pyg_12.bam
+
+
+samtools mpileup -l ${UCE} -f ${REF} ${BAM_28} > out_28.forward.mpileup
+samtools mpileup -l ${UCE} -f ${REF} ${BAM_12} > out_12.forward.mpileup
+
+bcftools mpileup --threads 10 -Ou -Q 30 -q 30 -C 50 -a AD,DP -R ${UCE} -f ${REF} ${BAM_28} | bcftools call --threads 10 -c -Ob > out_28.forward.bcf
+bcftools mpileup --threads 10 -Ou -Q 30 -q 30 -C 50 -a AD,DP -R ${UCE} -f ${REF} ${BAM_12} | bcftools call --threads 10 -c -Ob > out_12.forward.bcf
+
+nano bam_list.txt
+	/home/st4/GEiP/lab_1/pyg_28/C_pyg_28.bam
+	/home/st4/GEiP/lab_1/pyg_12/C_pyg_12.bam
+
+bcftools mpileup --threads 10 -Ou -Q 30 -q 30 -C 50 -a AD,DP -R ${UCE} -f ${REF} -b bam_list.txt | bcftools call --threads 10 -c -Ob > out.forward_2samples.bcf
+
+bcftools view out.forward_2samples.bcf | wc -l
+--
+160683
+--
+bcftools view out_28.forward.bcf | wc -l
+--
+155295
+--
+154764 #dla out_12
+--
+
+
+BCF=out_28.forward.bcf
+bcftools query -f '%QUAL\t%MQ\t%DP\n' ${BCF} > Stats_QualMQDP.txt
+bcftools stats ${BCF] > Stats.stat.txt
+
+bcftools view -v snps -e 'QUAL < 30 || MQ < 30 || FORMAT/DP < 3' out_28.forward.bcf > out_28.forward.filtered.vcf
+
+grep "scaffold2" out_28.forward.filtered.vcf | wc - l
+--
+69
+--
